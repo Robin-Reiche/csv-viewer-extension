@@ -1,19 +1,35 @@
-# CSV Viewer
+# CSV Grid Viewer
 
 A fast, lightweight CSV/TSV viewer for Visual Studio Code. Opens CSV files in a sortable, filterable grid — similar to Excel — right inside your editor.
 
+![Grid View](https://raw.githubusercontent.com/Robin-Reiche/csv-viewer-extension/master/images/grid-view.png)
+
 ## Features
 
-- **Grid View** — CSV data displayed in an interactive AG Grid table
-- **Auto-Fit Columns** — One click to fit all columns to their content width
-- **Zoom** — Scale the grid from 60% to 200% with `+` / `-` buttons or `Ctrl++` / `Ctrl+-`
-- **Sort & Filter** — Click column headers to sort, use the filter icon to search within columns
-- **Inline Editing** — Double-click any cell to edit, changes are saved back to the CSV file
-- **Undo / Redo** — Full undo/redo support with `Ctrl+Z` / `Ctrl+Y`
-- **Delimiter Detection** — Automatically detects commas, semicolons, and tabs
-- **TSV Support** — `.tsv` files are recognized automatically
-- **Theme Integration** — Adapts to your VS Code color theme (dark themes)
-- **Column Resize** — Drag column borders or double-click to auto-fit a single column
+### Grid View
+CSV data displayed in an interactive grid with alternating row colors, horizontal and vertical grid lines.
+
+![Grid Overview](https://raw.githubusercontent.com/Robin-Reiche/csv-viewer-extension/master/images/grid-overview.png)
+
+### Auto-Fit Columns
+One click to fit all columns to their content — headers and values are never truncated.
+
+![Auto-Fit](https://raw.githubusercontent.com/Robin-Reiche/csv-viewer-extension/master/images/autofit.gif)
+
+### Zoom
+Scale the entire grid from 60% to 200%.
+
+![Zoom](https://raw.githubusercontent.com/Robin-Reiche/csv-viewer-extension/master/images/zoom.gif)
+
+### Sort & Filter
+Click column headers to sort. Use the filter icon to search within columns.
+
+![Sort and Filter](https://raw.githubusercontent.com/Robin-Reiche/csv-viewer-extension/master/images/sort-filter.gif)
+
+### Inline Editing
+Double-click any cell to edit. Changes are saved back to the CSV file.
+
+![Editing](https://raw.githubusercontent.com/Robin-Reiche/csv-viewer-extension/master/images/editing.gif)
 
 ## Supported File Types
 
