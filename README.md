@@ -1,8 +1,8 @@
-# CSV Grid Viewer
+# CSV Grid Editor
 
-A fast, lightweight CSV/TSV viewer for Visual Studio Code. Opens CSV files in a sortable, filterable grid — similar to Excel — right inside your editor.
+A fast, lightweight CSV/TSV editor for Visual Studio Code. Opens CSV files in a sortable, filterable grid — similar to Excel — right inside your editor.
 
-![Grid View](https://raw.githubusercontent.com/Robin-Reiche/csv-viewer-extension/master/images/grid-view.png)
+![Grid View](https://raw.githubusercontent.com/Robin-Reiche/csv-grid-editor/master/images/grid-view.png)
 
 ## Features
 
