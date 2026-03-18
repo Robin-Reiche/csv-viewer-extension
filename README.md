@@ -6,30 +6,15 @@ A fast, lightweight CSV/TSV viewer for Visual Studio Code. Opens CSV files in a 
 
 ## Features
 
-### Grid View
-CSV data displayed in an interactive grid with alternating row colors, horizontal and vertical grid lines.
-
-![Grid Overview](https://raw.githubusercontent.com/Robin-Reiche/csv-viewer-extension/master/images/grid-overview.png)
-
-### Auto-Fit Columns
-One click to fit all columns to their content — headers and values are never truncated.
-
-![Auto-Fit](https://raw.githubusercontent.com/Robin-Reiche/csv-viewer-extension/master/images/autofit.gif)
-
-### Zoom
-Scale the entire grid from 60% to 200%.
-
-![Zoom](https://raw.githubusercontent.com/Robin-Reiche/csv-viewer-extension/master/images/zoom.gif)
-
-### Sort & Filter
-Click column headers to sort. Use the filter icon to search within columns.
-
-![Sort and Filter](https://raw.githubusercontent.com/Robin-Reiche/csv-viewer-extension/master/images/sort-filter.gif)
-
-### Inline Editing
-Double-click any cell to edit. Changes are saved back to the CSV file.
-
-![Editing](https://raw.githubusercontent.com/Robin-Reiche/csv-viewer-extension/master/images/editing.gif)
+- **Grid View** — Interactive grid with alternating row colors, horizontal and vertical grid lines
+- **Auto-Fit Columns** — One click to fit all columns to their content (headers and values are never truncated)
+- **Zoom** — Scale the entire grid from 60% to 200% with toolbar buttons or `Ctrl++` / `Ctrl+-`
+- **Sort & Filter** — Click column headers to sort, use the filter icon to search within columns
+- **Inline Editing** — Double-click any cell to edit, changes are saved back to the file
+- **Undo / Redo** — Full undo/redo support (`Ctrl+Z` / `Ctrl+Y`)
+- **Delimiter Detection** — Automatically detects commas, semicolons, and tabs
+- **Column Resize** — Drag column borders or double-click the resize handle to auto-fit a single column
+- **Theme Integration** — Adapts to your VS Code color theme
 
 ## Supported File Types
 
