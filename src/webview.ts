@@ -153,6 +153,11 @@ export function getWebviewContent(
             overflow: visible !important;
         }
 
+        /* Active filter indicator: highlight filter icon when column is filtered */
+        .ag-theme-alpine-dark .ag-header-cell.ag-header-cell-filtered .ag-icon-filter {
+            color: var(--vscode-charts-blue, #3794ff) !important;
+        }
+
         /* Selection */
         .ag-theme-alpine-dark .ag-cell.ag-cell-focus {
             border-color: var(--vscode-focusBorder, #007fd4) !important;
@@ -184,6 +189,8 @@ export function getWebviewContent(
         <div class="separator"></div>
         <button id="btn-autofit" title="Auto-fit column widths">&#x2194;</button>
         <div class="separator"></div>
+        <button id="btn-clear-filters" title="Clear all filters" style="display:none;">&#x2718; Filters</button>
+        <div class="separator" id="sep-filters" style="display:none;"></div>
         <button id="btn-zoom-out" title="Decrease size (Ctrl+-)">&#x2212;</button>
         <span id="zoom-level" style="font-size:11px;min-width:28px;text-align:center;opacity:0.6;">100%</span>
         <button id="btn-zoom-in" title="Increase size (Ctrl++)">&#x2B;</button>
@@ -466,6 +473,10 @@ export function getWebviewContent(
 
         document.getElementById('btn-autofit').addEventListener('click', toggleAutoFit);
 
+        document.getElementById('btn-clear-filters').addEventListener('click', function() {
+            if (gridApi) gridApi.setFilterModel(null);
+        });
+
         function notifyChange() {
             vscodeApi.postMessage({ type: 'edit', text: toCsv(data, currentDelimiter) });
         }
@@ -548,6 +559,22 @@ export function getWebviewContent(
                 singleClickEdit: false,
                 stopEditingWhenCellsLoseFocus: true,
                 undoRedoCellEditing: false,
+                onFilterChanged: function() {
+                    // Show/hide clear-filters button
+                    var isAnyFilter = gridApi && gridApi.isAnyFilterPresent();
+                    document.getElementById('btn-clear-filters').style.display = isAnyFilter ? '' : 'none';
+                    document.getElementById('sep-filters').style.display = isAnyFilter ? '' : 'none';
+
+                    // Update status with filtered row count
+                    var totalRows = data.length - 1;
+                    if (isAnyFilter) {
+                        var displayed = 0;
+                        gridApi.forEachNodeAfterFilter(function() { displayed++; });
+                        document.getElementById('status').textContent = displayed + ' of ' + totalRows + ' records (filtered)';
+                    } else {
+                        document.getElementById('status').textContent = totalRows + ' records';
+                    }
+                },
                 onCellValueChanged: function(event) {
                     const dataIndex = event.node.rowIndex + 1; // +1 because row 0 in data is header
                     const colField = event.colDef.field;
