@@ -38,6 +38,28 @@ A fast, lightweight CSV/TSV editor for Visual Studio Code. Opens CSV files in a 
 | `Ctrl++` | Zoom in |
 | `Ctrl+-` | Zoom out |
 
+## Technologies Used
+
+- **Language**: TypeScript
+- **Platform**: VS Code Extension API (Custom Editor)
+- **Frontend**: HTML, CSS (Webview)
+- **Build**: npm, tsconfig
+
+## Project Structure
+
+```
+csv-grid-editor/
+├── src/
+│   ├── extension.ts          # Extension entry point & activation
+│   ├── csvEditorProvider.ts   # Custom editor provider & document handling
+│   └── webview.ts            # Grid UI rendering & interaction logic
+├── images/
+│   └── grid-view.png         # Screenshot
+├── package.json              # Extension manifest & configuration
+├── tsconfig.json             # TypeScript configuration
+└── README.md
+```
+
 ## License
 
 [MIT](LICENSE)
