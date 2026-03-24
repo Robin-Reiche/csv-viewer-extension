@@ -1,5 +1,7 @@
 # CSV Grid Editor
 
+[![VS Marketplace](https://img.shields.io/visual-studio-marketplace/v/RobinReiche.csv-grid-editor?label=VS%20Code%20Marketplace&style=for-the-badge&logo=visualstudiocode&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=RobinReiche.csv-grid-editor)
+
 A fast, lightweight CSV/TSV editor for Visual Studio Code. Opens CSV files in a sortable, filterable grid — similar to Excel — right inside your editor.
 
 ![Grid View](https://raw.githubusercontent.com/Robin-Reiche/csv-grid-editor/master/images/grid-view.png)
@@ -37,6 +39,13 @@ A fast, lightweight CSV/TSV editor for Visual Studio Code. Opens CSV files in a 
 | `Ctrl+Y` | Redo |
 | `Ctrl++` | Zoom in |
 | `Ctrl+-` | Zoom out |
+
+## Contact
+
+**Robin Reiche**
+
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/robin-reiche/)
+[![Email](https://img.shields.io/badge/Email-EA4335?style=for-the-badge&logo=gmail&logoColor=white)](mailto:robin.reiche.dev@gmail.com)
 
 ## License
 
