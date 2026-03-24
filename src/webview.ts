@@ -62,6 +62,12 @@ export function getWebviewContent(
             align-items: center;
         }
 
+        .toolbar button.text-btn {
+            font-size: 11px;
+            align-self: center;
+            font-weight: 400;
+        }
+
         .toolbar button:hover:not(:disabled) {
             background: var(--vscode-toolbar-hoverBackground, rgba(255,255,255,0.1));
         }
@@ -189,7 +195,7 @@ export function getWebviewContent(
         <div class="separator"></div>
         <button id="btn-autofit" title="Auto-fit column widths">&#x2194;</button>
         <div class="separator"></div>
-        <button id="btn-clear-filters" title="Clear all filters" style="display:none;">&#x2718; Filters</button>
+        <button id="btn-clear-filters" title="Clear all filters" style="display:none;" class="text-btn">&#x2715; Filters</button>
         <div class="separator" id="sep-filters" style="display:none;"></div>
         <button id="btn-zoom-out" title="Decrease size (Ctrl+-)">&#x2212;</button>
         <span id="zoom-level" style="font-size:11px;min-width:28px;text-align:center;opacity:0.6;">100%</span>
@@ -332,6 +338,15 @@ export function getWebviewContent(
         const BASE_FONT_SIZE = 13;
         const BASE_CELL_PADDING = 6;
 
+        const BASE_TOOLBAR_HEIGHT = 28;
+        const BASE_TOOLBAR_FONT = 14;
+        const BASE_TOOLBAR_PAD = 5;
+        const BASE_SEP_HEIGHT = 14;
+        const BASE_INFO_FONT = 11;
+        const BASE_FOOTER_HEIGHT = 22;
+        const BASE_FOOTER_FONT = 11;
+        const BASE_TEXT_BTN_FONT = 11;
+
         function applyZoom() {
             var pct = ZOOM_STEPS[zoomIndex];
             var scale = pct / 100;
@@ -346,6 +361,36 @@ export function getWebviewContent(
             container.style.setProperty('--ag-header-height', headerH + 'px');
             container.style.setProperty('--ag-font-size', fontSize + 'px');
             container.style.setProperty('--ag-cell-horizontal-padding', cellPad + 'px');
+
+            // Scale toolbar
+            var toolbar = document.querySelector('.toolbar');
+            toolbar.style.height = Math.round(BASE_TOOLBAR_HEIGHT * scale) + 'px';
+            toolbar.style.fontSize = Math.round(BASE_TOOLBAR_FONT * scale) + 'px';
+            var btns = toolbar.querySelectorAll('button');
+            var iconFontPx = Math.round(BASE_TOOLBAR_FONT * scale);
+            var textBtnFontPx = Math.round(BASE_TEXT_BTN_FONT * scale);
+            for (var i = 0; i < btns.length; i++) {
+                btns[i].style.fontSize = iconFontPx + 'px';
+                btns[i].style.padding = '2px ' + Math.round(BASE_TOOLBAR_PAD * scale) + 'px';
+            }
+            // Override clear-filters button to match icon visual weight
+            var clearBtn = document.getElementById('btn-clear-filters');
+            if (clearBtn) {
+                clearBtn.style.fontSize = textBtnFontPx + 'px';
+            }
+            var seps = toolbar.querySelectorAll('.separator');
+            for (var i = 0; i < seps.length; i++) {
+                seps[i].style.height = Math.round(BASE_SEP_HEIGHT * scale) + 'px';
+            }
+            var info = document.getElementById('info');
+            info.style.fontSize = Math.round(BASE_INFO_FONT * scale) + 'px';
+            var zoomLabel = document.getElementById('zoom-level');
+            zoomLabel.style.fontSize = Math.round(BASE_INFO_FONT * scale) + 'px';
+
+            // Scale footer
+            var footer = document.querySelector('.footer');
+            footer.style.height = Math.round(BASE_FOOTER_HEIGHT * scale) + 'px';
+            footer.style.fontSize = Math.round(BASE_FOOTER_FONT * scale) + 'px';
 
             document.getElementById('zoom-level').textContent = pct + '%';
 
@@ -562,7 +607,11 @@ export function getWebviewContent(
                 onFilterChanged: function() {
                     // Show/hide clear-filters button
                     var isAnyFilter = gridApi && gridApi.isAnyFilterPresent();
-                    document.getElementById('btn-clear-filters').style.display = isAnyFilter ? '' : 'none';
+                    var cfBtn = document.getElementById('btn-clear-filters');
+                    cfBtn.style.display = isAnyFilter ? '' : 'none';
+                    // Ensure font size matches current zoom (smaller than icon buttons)
+                    var curScale = ZOOM_STEPS[zoomIndex] / 100;
+                    cfBtn.style.fontSize = Math.round(BASE_TEXT_BTN_FONT * curScale) + 'px';
                     document.getElementById('sep-filters').style.display = isAnyFilter ? '' : 'none';
 
                     // Update status with filtered row count
