@@ -1,17 +1,74 @@
 import * as vscode from 'vscode';
 
 export function getWebviewContent(
-    _webview: vscode.Webview,
-    _extensionUri: vscode.Uri,
-    csvText: string,
-    delimiter: string
+    webview: vscode.Webview,
+    extensionUri: vscode.Uri,
+    delimiter: string,
+    isPreview: boolean = false,
+    previewMode: string = 'full',
+    totalLineCount: number = 0,
+    fileName: string = '',
+    isChunked: boolean = false,
+    isMac: boolean = false
 ): string {
     const nonce = getNonce();
+    const mod   = isMac ? '⌘' : 'Ctrl+';
 
-    const escapedCsv = csvText
-        .replace(/\\/g, '\\\\')
-        .replace(/`/g, '\\`')
-        .replace(/\$/g, '\\$');
+    if (previewMode === 'plaintext') {
+        return /*html*/ `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV Plain Text</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: var(--vscode-editor-font-family, monospace);
+            font-size: var(--vscode-editor-font-size, 13px);
+            background: var(--vscode-editor-background, #1e1e1e);
+            color: var(--vscode-editor-foreground, #d4d4d4);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .banner {
+            flex-shrink: 0;
+            padding: 3px 12px;
+            background: var(--vscode-editorWarning-foreground, #cca700);
+            color: #000;
+            font-size: 11px;
+            font-family: var(--vscode-font-family, sans-serif);
+        }
+        #content {
+            flex: 1;
+            overflow: auto;
+            padding: 12px 16px;
+            white-space: pre;
+            tab-size: 4;
+        }
+    </style>
+</head>
+<body>
+    <div class="banner">Plain text view — read-only</div>
+    <pre id="content">Loading…</pre>
+    <script nonce="${nonce}">
+        const vscodeApi = acquireVsCodeApi();
+        window.addEventListener('message', function(event) {
+            if (event.data.type === 'init') {
+                document.getElementById('content').textContent = event.data.text;
+            }
+        });
+        vscodeApi.postMessage({ type: 'ready' });
+    </script>
+</body>
+</html>`;
+    }
+
+    const cssUri        = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'webview.css'));
+    const codiconCssUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'codicon.css'));
+    const scriptUri     = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'webview.js'));
 
     const escapedDelimiter = delimiter
         .replace(/\\/g, '\\\\')
@@ -22,694 +79,142 @@ export function getWebviewContent(
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}' https://cdn.jsdelivr.net; style-src ${webview.cspSource} https://cdn.jsdelivr.net 'unsafe-inline'; font-src ${webview.cspSource} https://cdn.jsdelivr.net; img-src ${webview.cspSource} https://cdn.jsdelivr.net data:;">
     <title>CSV Viewer</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            font-family: var(--vscode-font-family, "Segoe UI", sans-serif);
-            background: var(--vscode-editor-background, #1e1e1e);
-            color: var(--vscode-editor-foreground, #d4d4d4);
-            overflow: hidden;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            font-size: var(--vscode-font-size, 13px);
-        }
-
-        /* ── Toolbar ── */
-        .toolbar {
-            display: flex;
-            align-items: center;
-            gap: 2px;
-            padding: 2px 8px;
-            background: var(--vscode-editor-background, #1e1e1e);
-            border-bottom: 1px solid var(--vscode-panel-border, #2d2d2d);
-            flex-shrink: 0;
-            height: 28px;
-        }
-
-        .toolbar button {
-            background: transparent;
-            border: 1px solid transparent;
-            color: var(--vscode-editor-foreground, #ccc);
-            cursor: pointer;
-            padding: 2px 5px;
-            border-radius: 3px;
-            font-size: 14px;
-            line-height: 1;
-            display: flex;
-            align-items: center;
-        }
-
-        .toolbar button.text-btn {
-            font-size: 11px;
-            align-self: center;
-            font-weight: 400;
-        }
-
-        .toolbar button:hover:not(:disabled) {
-            background: var(--vscode-toolbar-hoverBackground, rgba(255,255,255,0.1));
-        }
-
-        .toolbar button:disabled {
-            opacity: 0.3;
-            cursor: default;
-        }
-
-        .toolbar .separator {
-            width: 1px;
-            height: 14px;
-            background: var(--vscode-panel-border, #555);
-            margin: 0 3px;
-        }
-
-        .toolbar .info {
-            margin-left: auto;
-            opacity: 0.5;
-            font-size: 11px;
-        }
-
-        /* ── Grid container ── */
-        #grid-container {
-            flex: 1;
-            overflow: hidden;
-        }
-
-        /* ── AG Grid Theme Override (GrapeCity-style) ── */
-        .ag-theme-alpine-dark,
-        .ag-theme-alpine {
-            --ag-font-family: var(--vscode-font-family, "Segoe UI", sans-serif);
-            --ag-font-size: var(--vscode-font-size, 13px);
-            --ag-row-height: 24px;
-            --ag-header-height: 26px;
-            --ag-cell-horizontal-padding: 6px;
-            --ag-grid-size: 2px;
-            --ag-icon-size: 12px;
-            --ag-wrapper-border: 1px solid var(--vscode-tree-indentGuidesStroke, #585858);
-            --ag-border-color: var(--vscode-tree-indentGuidesStroke, #585858);
-            --ag-row-border-color: var(--vscode-tree-indentGuidesStroke, #585858);
-        }
-
-        .ag-theme-alpine-dark {
-            --ag-background-color: var(--vscode-editor-background, #1e1e1e);
-            --ag-header-background-color: var(--vscode-editorGroupHeader-tabsBackground, #252526);
-            --ag-header-foreground-color: var(--vscode-editor-foreground, #cccccc);
-            --ag-odd-row-background-color: var(--vscode-sideBar-background, #252526);
-            --ag-row-hover-color: var(--vscode-list-hoverBackground, #2a2d2e);
-            --ag-selected-row-background-color: var(--vscode-list-activeSelectionBackground, #094771);
-            --ag-range-selection-background-color: var(--vscode-list-inactiveSelectionBackground, #37373d);
-            --ag-foreground-color: var(--vscode-editor-foreground, #d4d4d4);
-            --ag-input-focus-border-color: var(--vscode-focusBorder, #007fd4);
-        }
-
-        /* Force header background via direct CSS (more reliable than CSS vars) */
-        .ag-theme-alpine-dark .ag-header {
-            background-color: var(--vscode-editorGroupHeader-tabsBackground, #252526) !important;
-            color: var(--vscode-editor-foreground, #cccccc) !important;
-        }
-
-        /* Alternating row colors (GrapeCity style) */
-        .ag-theme-alpine-dark .ag-row-odd {
-            background-color: var(--vscode-sideBar-background, #252526) !important;
-        }
-        .ag-theme-alpine-dark .ag-row-even {
-            background-color: var(--vscode-editor-background, #1e1e1e) !important;
-        }
-
-        /* Grid lines on body cells (vertical + horizontal) */
-        .ag-theme-alpine-dark .ag-cell {
-            border-right: 1px solid var(--vscode-tree-indentGuidesStroke, #585858) !important;
-        }
-        .ag-theme-alpine-dark .ag-row {
-            border-bottom: 1px solid var(--vscode-tree-indentGuidesStroke, #585858) !important;
-        }
-
-        /* Vertical grid lines + bold on header cells */
-        .ag-theme-alpine-dark .ag-header-cell {
-            font-weight: 600 !important;
-            border-right: 1px solid var(--vscode-tree-indentGuidesStroke, #585858) !important;
-        }
-        /* Prevent descender clipping (g, y, p, q) in header text */
-        .ag-theme-alpine-dark .ag-header-cell-text {
-            overflow: visible !important;
-            line-height: normal !important;
-        }
-        .ag-theme-alpine-dark .ag-header-cell-label {
-            overflow: visible !important;
-        }
-
-        /* Active filter indicator: highlight filter icon when column is filtered */
-        .ag-theme-alpine-dark .ag-header-cell.ag-header-cell-filtered .ag-icon-filter {
-            color: var(--vscode-charts-blue, #3794ff) !important;
-        }
-
-        /* Selection */
-        .ag-theme-alpine-dark .ag-cell.ag-cell-focus {
-            border-color: var(--vscode-focusBorder, #007fd4) !important;
-        }
-
-
-        /* ── Footer ── */
-        .footer {
-            display: flex;
-            align-items: center;
-            padding: 0 8px;
-            background: var(--vscode-sideBar-background, #252526);
-            border-top: 1px solid var(--vscode-tree-indentGuidesStroke, #585858);
-            flex-shrink: 0;
-            height: 22px;
-            font-size: 11px;
-        }
-
-        .footer .status {
-            margin-left: auto;
-            opacity: 0.6;
-        }
-    </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/styles/ag-grid.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/styles/ag-theme-alpine.css">
+    <link rel="stylesheet" href="${codiconCssUri}">
+    <link rel="stylesheet" href="${cssUri}">
 </head>
 <body>
-    <div class="toolbar">
-        <button id="btn-undo" title="Undo (Ctrl+Z)" disabled>&#x21A9;</button>
-        <button id="btn-redo" title="Redo (Ctrl+Y)" disabled>&#x21AA;</button>
-        <div class="separator"></div>
-        <button id="btn-autofit" title="Auto-fit column widths">&#x2194;</button>
-        <div class="separator"></div>
-        <button id="btn-clear-filters" title="Clear all filters" style="display:none;" class="text-btn">&#x2715; Filters</button>
-        <div class="separator" id="sep-filters" style="display:none;"></div>
-        <button id="btn-zoom-out" title="Decrease size (Ctrl+-)">&#x2212;</button>
-        <span id="zoom-level" style="font-size:11px;min-width:28px;text-align:center;opacity:0.6;">100%</span>
-        <button id="btn-zoom-in" title="Increase size (Ctrl++)">&#x2B;</button>
-        <div class="separator"></div>
-        <span class="info" id="info"></span>
+    <!-- Loading overlay -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-label" id="loading-label">Loading…</div>
+        <div class="loading-bar-track"><div class="loading-bar-fill"></div></div>
     </div>
 
-    <div id="grid-container" class="ag-theme-alpine-dark"></div>
+    <!-- Preview banner -->
+    ${isPreview ? `<div class="preview-banner"><span class="preview-icon">&#x1F50D;</span><span id="preview-text"></span></div>` : ''}
 
+    <!-- Toolbar -->
+    <div class="toolbar">
+        <button id="btn-undo"    title="Undo (${mod}Z)"  disabled ${isPreview ? 'style="display:none;"' : ''}><i class="codicon codicon-discard"></i></button>
+        <button id="btn-redo"    title="Redo (${mod}Y)"  disabled ${isPreview ? 'style="display:none;"' : ''}><i class="codicon codicon-redo"></i></button>
+        <div    class="separator"                                 ${isPreview ? 'style="display:none;"' : ''}></div>
+        <button id="btn-autofit" title="Auto-fit column widths"><i class="codicon codicon-arrow-both"></i></button>
+        <div    class="separator"></div>
+        <button id="btn-clear-filters" title="Clear all filters" style="display:none;" class="text-btn"><i class="codicon codicon-filter-filled"></i> Filters</button>
+        <div    class="separator" id="sep-filters" style="display:none;"></div>
+        <button id="btn-zoom-out" title="Decrease size (${mod}-)"><i class="codicon codicon-zoom-out"></i></button>
+        <span   id="zoom-level"  style="font-size:11px;min-width:28px;text-align:center;opacity:0.6;">100%</span>
+        <button id="btn-zoom-in"  title="Increase size (${mod}+)"><i class="codicon codicon-zoom-in"></i></button>
+        <div    class="separator"></div>
+        <button id="btn-select-mode"   title="Select &amp; Copy Mode"><i class="codicon codicon-selection"></i></button>
+        <div    class="separator"></div>
+        <button id="btn-profile"       title="Column Profile"><i class="codicon codicon-graph"></i></button>
+        <div    class="separator"></div>
+        <button id="btn-find-replace"  title="Find &amp; Replace (${mod}F)"><i class="codicon codicon-search"></i></button>
+        <div    class="separator"></div>
+        <button id="btn-export"        title="Export CSV" class="text-btn"${isPreview ? ' style="display:none;"' : ''}><i class="codicon codicon-export"></i> Export</button>
+        <div    class="separator"></div>
+        <span   id="delim-badge" class="delim-badge" title="Click to change delimiter">Delim: ,</span>
+        <span   class="info" id="info"></span>
+    </div>
+
+    <!-- Delimiter dropdown [F2] -->
+    <div id="delim-dropdown" class="delim-dropdown hidden">
+        <div class="delim-option" data-delim=",">,&nbsp;&nbsp; Comma</div>
+        <div class="delim-option" data-delim=";">;&nbsp;&nbsp; Semicolon</div>
+        <div class="delim-option" data-delim="\\t">&#x21E5;&nbsp; Tab</div>
+        <div class="delim-option" data-delim="|">|&nbsp;&nbsp; Pipe</div>
+    </div>
+
+    <!-- Find & Replace bar -->
+    <div id="find-bar" class="find-bar hidden">
+        <span class="find-section-label">Find</span>
+        <input  id="find-input"    class="find-input" type="text" placeholder="Search…" spellcheck="false">
+        <button id="find-case-btn" class="find-case-btn" title="Match case">Aa</button>
+        <button id="find-prev"     class="find-btn" title="Previous match (Shift+Enter)"><i class="codicon codicon-arrow-up"></i></button>
+        <button id="find-next"     class="find-btn" title="Next match (Enter)"><i class="codicon codicon-arrow-down"></i></button>
+        <span   id="find-count"    class="find-count"></span>
+        <div    class="find-sep"></div>
+        <span class="find-section-label">Replace</span>
+        <input  id="replace-input" class="find-input" type="text" placeholder="Replace with…" spellcheck="false">
+        <button id="replace-one"   class="find-btn find-action-btn" title="Replace current"${isPreview ? ' disabled' : ''}>Replace</button>
+        <button id="replace-all"   class="find-btn find-action-btn" title="Replace all"${isPreview ? ' disabled' : ''}>All</button>
+        <button id="find-close"    class="find-close" title="Close (Esc)"><i class="codicon codicon-close"></i></button>
+    </div>
+
+    <!-- Main content -->
+    <div id="content-row">
+        <div id="grid-container" class="ag-theme-alpine-dark"></div>
+
+        <div id="select-container" style="display:none;flex-direction:column;">
+            <div class="sc-toolbar">
+                <button id="btn-sc-back" class="sc-back-btn"><i class="codicon codicon-arrow-left"></i> Back</button>
+                <div class="sc-vsep"></div>
+                <button id="btn-sc-copy" class="sc-copy-btn" disabled><i class="codicon codicon-copy"></i> Copy</button>
+                <button id="btn-sc-copy-headers" class="sc-copy-headers-btn"><i class="codicon codicon-symbol-key"></i> Copy only headers</button>
+                <label class="sc-check-lbl"><input type="checkbox" id="sc-with-header" checked> Include header</label>
+                <span id="sc-sel-info" class="sc-sel-info"></span>
+                <span id="sc-feedback" class="sc-feedback"></span>
+            </div>
+            <div class="sc-table-wrap" id="sc-table-wrap"></div>
+            <div id="sc-row-note" class="sc-row-note" style="display:none;"></div>
+        </div>
+
+        <div id="profile-panel">
+            <div class="profile-resize-handle" id="profile-resize-handle"></div>
+            <div class="profile-panel-header">
+                <span class="profile-panel-title">Column Profile</span>
+                <div class="profile-dock-btns">
+                    <button class="profile-dock-btn" data-dock="left"   title="Dock left">  <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="1" y="1" width="5"  height="12" rx="1"/><rect x="7"  y="1" width="6" height="12" rx="1" opacity="0.25"/></svg></button>
+                    <button class="profile-dock-btn" data-dock="bottom" title="Dock bottom"><svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="1" y="1" width="12" height="7"  rx="1" opacity="0.25"/><rect x="1" y="9" width="12" height="4"  rx="1"/></svg></button>
+                    <button class="profile-dock-btn profile-dock-btn--active" data-dock="right"  title="Dock right"> <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="1" y="1" width="6"  height="12" rx="1" opacity="0.25"/><rect x="8"  y="1" width="5" height="12" rx="1"/></svg></button>
+                </div>
+                <button class="profile-panel-close" id="btn-profile-close" title="Close"><i class="codicon codicon-close"></i></button>
+            </div>
+            <div class="profile-scroll" id="profile-scroll"></div>
+        </div>
+    </div><!-- /#content-row -->
+
+    <!-- Column freeze context menu [F5] -->
+    <div id="col-context-menu" class="col-context-menu hidden">
+        <div id="col-ctx-freeze"   class="col-ctx-item">&#x1F4CC; Freeze column</div>
+        <div id="col-ctx-unfreeze" class="col-ctx-item" style="display:none;">&#x1F4CC; Unfreeze column</div>
+    </div>
+
+    <!-- Pagination bar [F7] -->
+    <div id="pagination-bar" class="pagination-bar hidden">
+        <button id="btn-page-first" class="page-btn" title="First page"  disabled>&#x21E4;</button>
+        <button id="btn-page-prev"  class="page-btn" title="Previous page" disabled>&#x25C4;</button>
+        <span   id="page-info"      class="page-info">Page 1 / 1</span>
+        <button id="btn-page-next"  class="page-btn" title="Next page">&#x25BA;</button>
+        <button id="btn-page-last"  class="page-btn" title="Last page">&#x21E5;</button>
+    </div>
+
+    <!-- Footer -->
     <div class="footer">
         <span class="status" id="status"></span>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/dist/ag-grid-community.min.js"></script>
+    <!-- AG Grid -->
+    <script nonce="${nonce}" src="https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/dist/ag-grid-community.min.js"></script>
 
+    <!-- Injected globals (must run before webview.js) -->
     <script nonce="${nonce}">
-        const vscodeApi = acquireVsCodeApi();
-
-        // ── CSV Parser ──
-        function parseCsv(text, delimiter) {
-            const rows = [];
-            let row = [];
-            let field = '';
-            let inQuotes = false;
-
-            for (let i = 0; i < text.length; i++) {
-                const ch = text[i];
-                if (inQuotes) {
-                    if (ch === '"') {
-                        if (i + 1 < text.length && text[i + 1] === '"') {
-                            field += '"';
-                            i++;
-                        } else {
-                            inQuotes = false;
-                        }
-                    } else {
-                        field += ch;
-                    }
-                } else if (ch === '"') {
-                    inQuotes = true;
-                } else if (ch === delimiter) {
-                    row.push(field.trim());
-                    field = '';
-                } else if (ch === '\\r') {
-                    // skip
-                } else if (ch === '\\n') {
-                    row.push(field.trim());
-                    if (row.length > 0) rows.push(row);
-                    row = [];
-                    field = '';
-                } else {
-                    field += ch;
-                }
-            }
-            row.push(field.trim());
-            if (row.some(f => f !== '')) rows.push(row);
-            return rows;
-        }
-
-        function toCsv(rows, delimiter) {
-            return rows.map(row =>
-                row.map(cell => {
-                    const s = String(cell);
-                    if (s.includes(delimiter) || s.includes('"') || s.includes('\\n') || s.includes('\\r')) {
-                        return '"' + s.replace(/"/g, '""') + '"';
-                    }
-                    return s;
-                }).join(delimiter)
-            ).join('\\n');
-        }
-
-        // Column letter helper (0=A, 1=B, ..., 25=Z, 26=AA)
-        function colLetter(i) {
-            let s = '';
-            let n = i;
-            while (n >= 0) {
-                s = String.fromCharCode(65 + (n % 26)) + s;
-                n = Math.floor(n / 26) - 1;
-            }
-            return s;
-        }
-
-        // ── State ──
-        let currentDelimiter = "${escapedDelimiter}";
-        let data = parseCsv(\`${escapedCsv}\`, currentDelimiter);
-        let undoStack = [];
-        let redoStack = [];
-        let gridApi = null;
-
-        function snapshot() {
-            return JSON.parse(JSON.stringify(data));
-        }
-
-        function pushUndo() {
-            undoStack.push(snapshot());
-            redoStack = [];
-            updateButtons();
-        }
-
-        function undo() {
-            if (undoStack.length === 0) return;
-            redoStack.push(snapshot());
-            data = undoStack.pop();
-            refreshGrid();
-            notifyChange();
-            updateButtons();
-        }
-
-        function redo() {
-            if (redoStack.length === 0) return;
-            undoStack.push(snapshot());
-            data = redoStack.pop();
-            refreshGrid();
-            notifyChange();
-            updateButtons();
-        }
-
-        function updateButtons() {
-            document.getElementById('btn-undo').disabled = undoStack.length === 0;
-            document.getElementById('btn-redo').disabled = redoStack.length === 0;
-        }
-
-        function getNumCols(rows) {
-            var max = 0;
-            for (var i = 0; i < rows.length; i++) {
-                if (rows[i].length > max) max = rows[i].length;
-            }
-            return max;
-        }
-
-        document.getElementById('btn-undo').addEventListener('click', undo);
-        document.getElementById('btn-redo').addEventListener('click', redo);
-
-        // ── Zoom / Scaling ──
-        const ZOOM_STEPS = [60, 70, 80, 90, 100, 110, 125, 150, 175, 200];
-        let zoomIndex = 4; // 100%
-        const BASE_ROW_HEIGHT = 24;
-        const BASE_HEADER_HEIGHT = 26;
-        const BASE_FONT_SIZE = 13;
-        const BASE_CELL_PADDING = 6;
-
-        const BASE_TOOLBAR_HEIGHT = 28;
-        const BASE_TOOLBAR_FONT = 14;
-        const BASE_TOOLBAR_PAD = 5;
-        const BASE_SEP_HEIGHT = 14;
-        const BASE_INFO_FONT = 11;
-        const BASE_FOOTER_HEIGHT = 22;
-        const BASE_FOOTER_FONT = 11;
-        const BASE_TEXT_BTN_FONT = 11;
-
-        function applyZoom() {
-            var pct = ZOOM_STEPS[zoomIndex];
-            var scale = pct / 100;
-            var container = document.getElementById('grid-container');
-
-            var rowH = Math.round(BASE_ROW_HEIGHT * scale);
-            var headerH = Math.round(BASE_HEADER_HEIGHT * scale);
-            var fontSize = Math.round(BASE_FONT_SIZE * scale);
-            var cellPad = Math.round(BASE_CELL_PADDING * scale);
-
-            container.style.setProperty('--ag-row-height', rowH + 'px');
-            container.style.setProperty('--ag-header-height', headerH + 'px');
-            container.style.setProperty('--ag-font-size', fontSize + 'px');
-            container.style.setProperty('--ag-cell-horizontal-padding', cellPad + 'px');
-
-            // Scale toolbar
-            var toolbar = document.querySelector('.toolbar');
-            toolbar.style.height = Math.round(BASE_TOOLBAR_HEIGHT * scale) + 'px';
-            toolbar.style.fontSize = Math.round(BASE_TOOLBAR_FONT * scale) + 'px';
-            var btns = toolbar.querySelectorAll('button');
-            var iconFontPx = Math.round(BASE_TOOLBAR_FONT * scale);
-            var textBtnFontPx = Math.round(BASE_TEXT_BTN_FONT * scale);
-            for (var i = 0; i < btns.length; i++) {
-                btns[i].style.fontSize = iconFontPx + 'px';
-                btns[i].style.padding = '2px ' + Math.round(BASE_TOOLBAR_PAD * scale) + 'px';
-            }
-            // Override clear-filters button to match icon visual weight
-            var clearBtn = document.getElementById('btn-clear-filters');
-            if (clearBtn) {
-                clearBtn.style.fontSize = textBtnFontPx + 'px';
-            }
-            var seps = toolbar.querySelectorAll('.separator');
-            for (var i = 0; i < seps.length; i++) {
-                seps[i].style.height = Math.round(BASE_SEP_HEIGHT * scale) + 'px';
-            }
-            var info = document.getElementById('info');
-            info.style.fontSize = Math.round(BASE_INFO_FONT * scale) + 'px';
-            var zoomLabel = document.getElementById('zoom-level');
-            zoomLabel.style.fontSize = Math.round(BASE_INFO_FONT * scale) + 'px';
-
-            // Scale footer
-            var footer = document.querySelector('.footer');
-            footer.style.height = Math.round(BASE_FOOTER_HEIGHT * scale) + 'px';
-            footer.style.fontSize = Math.round(BASE_FOOTER_FONT * scale) + 'px';
-
-            document.getElementById('zoom-level').textContent = pct + '%';
-
-            // Refresh grid to apply new row heights
-            if (gridApi) {
-                gridApi.resetRowHeights();
-                gridApi.refreshHeader();
-            }
-        }
-
-        function zoomIn() {
-            if (zoomIndex < ZOOM_STEPS.length - 1) {
-                zoomIndex++;
-                applyZoom();
-            }
-        }
-
-        function zoomOut() {
-            if (zoomIndex > 0) {
-                zoomIndex--;
-                applyZoom();
-            }
-        }
-
-        document.getElementById('btn-zoom-in').addEventListener('click', zoomIn);
-        document.getElementById('btn-zoom-out').addEventListener('click', zoomOut);
-
-        let isAutoFitted = false;
-        const DEFAULT_COL_WIDTH = 130;
-
-        function measureTextWidths(data) {
-            var headerRow = data[0];
-            var bodyRows = data.slice(1);
-            var numCols = getNumCols(data);
-
-            // Read actual cell/header padding from the DOM
-            var sampleCell = document.querySelector('.ag-cell');
-            var sampleHeader = document.querySelector('.ag-header-cell');
-            var cellPadLR = 12; // default: 6px each side
-            var headerPadLR = 12;
-            if (sampleCell) {
-                var scs = getComputedStyle(sampleCell);
-                cellPadLR = parseFloat(scs.paddingLeft) + parseFloat(scs.paddingRight);
-            }
-            if (sampleHeader) {
-                var shs = getComputedStyle(sampleHeader);
-                headerPadLR = parseFloat(shs.paddingLeft) + parseFloat(shs.paddingRight);
-            }
-            // Extra buffer: border (1px) + canvas measureText imprecision (~8px) + sort icon for header (~18px)
-            var cellExtra = cellPadLR + 10;
-            var headerExtra = headerPadLR + 26;
-
-            // Read font from actual rendered AG Grid elements
-            var sampleCellText = document.querySelector('.ag-cell-value');
-            var sampleHeaderText = document.querySelector('.ag-header-cell-text');
-
-            var cellFontSize = '13px';
-            var cellFontFamily = '"Segoe UI", sans-serif';
-            var cellFontWeight = '400';
-            if (sampleCellText) {
-                var cs = getComputedStyle(sampleCellText);
-                cellFontSize = cs.fontSize;
-                cellFontFamily = cs.fontFamily;
-                cellFontWeight = cs.fontWeight;
-            } else if (sampleCell) {
-                var cs2 = getComputedStyle(sampleCell);
-                cellFontSize = cs2.fontSize;
-                cellFontFamily = cs2.fontFamily;
-                cellFontWeight = cs2.fontWeight;
-            }
-
-            var headerFontSize = cellFontSize;
-            var headerFontFamily = cellFontFamily;
-            var headerFontWeight = '600';
-            if (sampleHeaderText) {
-                var hs = getComputedStyle(sampleHeaderText);
-                headerFontSize = hs.fontSize;
-                headerFontFamily = hs.fontFamily;
-                headerFontWeight = hs.fontWeight || '600';
-            }
-
-            var canvas = document.createElement('canvas');
-            var ctx = canvas.getContext('2d');
-            var headerFontStr = headerFontWeight + ' ' + headerFontSize + ' ' + headerFontFamily;
-            var cellFontStr = cellFontWeight + ' ' + cellFontSize + ' ' + cellFontFamily;
-
-            var colState = [];
-            for (var c = 0; c < numCols; c++) {
-                // Measure header text
-                ctx.font = headerFontStr;
-                var headerW = ctx.measureText(headerRow[c] || '').width + headerExtra;
-
-                // Measure all body rows
-                ctx.font = cellFontStr;
-                var maxBodyW = 0;
-                for (var r = 0; r < bodyRows.length; r++) {
-                    var val = (bodyRows[r] && bodyRows[r][c]) ? String(bodyRows[r][c]) : '';
-                    var w = ctx.measureText(val).width + cellExtra;
-                    if (w > maxBodyW) maxBodyW = w;
-                }
-
-                // Column width = whichever is wider: header or longest body value
-                var finalW = headerW > maxBodyW ? headerW : maxBodyW;
-                colState.push({ colId: 'col_' + c, width: Math.ceil(finalW) });
-            }
-
-            return colState;
-        }
-
-        function toggleAutoFit() {
-            if (!gridApi) return;
-
-            try {
-                if (!isAutoFitted) {
-                    var colState = measureTextWidths(data);
-                    gridApi.applyColumnState({ state: colState });
-                } else {
-                    buildGrid();
-                }
-                isAutoFitted = !isAutoFitted;
-            } catch (err) {
-                console.error('[AutoFit] ERROR:', err);
-            }
-        }
-
-        document.getElementById('btn-autofit').addEventListener('click', toggleAutoFit);
-
-        document.getElementById('btn-clear-filters').addEventListener('click', function() {
-            if (gridApi) gridApi.setFilterModel(null);
-        });
-
-        function notifyChange() {
-            vscodeApi.postMessage({ type: 'edit', text: toCsv(data, currentDelimiter) });
-        }
-
-        // ── Build AG Grid ──
-        function buildGrid() {
-            if (!data || data.length === 0) return;
-
-            // First row is the header
-            const headerRow = data[0];
-            const bodyRows = data.slice(1);
-            const numCols = getNumCols(data);
-
-            const columnDefs = [];
-
-            // Detect which columns are numeric (sample up to 100 rows)
-            function isColumnNumeric(colIndex) {
-                var sampleSize = Math.min(bodyRows.length, 100);
-                var numCount = 0;
-                var nonEmpty = 0;
-                for (var r = 0; r < sampleSize; r++) {
-                    var val = bodyRows[r] && bodyRows[r][colIndex] ? bodyRows[r][colIndex] : '';
-                    if (val === '') continue;
-                    nonEmpty++;
-                    if (!isNaN(Number(val))) numCount++;
-                }
-                return nonEmpty > 0 && numCount / nonEmpty > 0.8;
-            }
-
-            for (let c = 0; c < numCols; c++) {
-                const headerName = headerRow[c] !== undefined
-                    ? headerRow[c]
-                    : '';
-                const colDef = {
-                    headerName: headerName,
-                    field: 'col_' + c,
-                    minWidth: 60,
-                    editable: true,
-                    sortable: true,
-                    filter: true,
-                    resizable: true,
-                    suppressMovable: false,
-                };
-                if (isColumnNumeric(c)) {
-                    colDef.comparator = function(a, b) {
-                        var numA = a === '' || a == null ? -Infinity : Number(a);
-                        var numB = b === '' || b == null ? -Infinity : Number(b);
-                        return numA - numB;
-                    };
-                }
-                columnDefs.push(colDef);
-            }
-
-            // Convert body data to row objects (skip header row)
-            const rowData = bodyRows.map((row, r) => {
-                const obj = {};
-                for (let c = 0; c < numCols; c++) {
-                    obj['col_' + c] = row[c] !== undefined ? row[c] : '';
-                }
-                return obj;
-            });
-
-            const container = document.getElementById('grid-container');
-            container.innerHTML = '';
-
-            const gridOptions = {
-                columnDefs: columnDefs,
-                rowData: rowData,
-                defaultColDef: {
-                    flex: 0,
-                    width: 130,
-                    editable: true,
-                    sortable: true,
-                    filter: true,
-                    resizable: true,
-                },
-                animateRows: false,
-                enableCellTextSelection: true,
-                suppressFieldDotNotation: true,
-                singleClickEdit: false,
-                stopEditingWhenCellsLoseFocus: true,
-                undoRedoCellEditing: false,
-                onFilterChanged: function() {
-                    // Show/hide clear-filters button
-                    var isAnyFilter = gridApi && gridApi.isAnyFilterPresent();
-                    var cfBtn = document.getElementById('btn-clear-filters');
-                    cfBtn.style.display = isAnyFilter ? '' : 'none';
-                    // Ensure font size matches current zoom (smaller than icon buttons)
-                    var curScale = ZOOM_STEPS[zoomIndex] / 100;
-                    cfBtn.style.fontSize = Math.round(BASE_TEXT_BTN_FONT * curScale) + 'px';
-                    document.getElementById('sep-filters').style.display = isAnyFilter ? '' : 'none';
-
-                    // Update status with filtered row count
-                    var totalRows = data.length - 1;
-                    if (isAnyFilter) {
-                        var displayed = 0;
-                        gridApi.forEachNodeAfterFilter(function() { displayed++; });
-                        document.getElementById('status').textContent = displayed + ' of ' + totalRows + ' records (filtered)';
-                    } else {
-                        document.getElementById('status').textContent = totalRows + ' records';
-                    }
-                },
-                onCellValueChanged: function(event) {
-                    const dataIndex = event.node.rowIndex + 1; // +1 because row 0 in data is header
-                    const colField = event.colDef.field;
-                    if (!colField) return;
-
-                    const colIndex = parseInt(colField.replace('col_', ''));
-
-                    pushUndo();
-                    while (data[dataIndex].length <= colIndex) data[dataIndex].push('');
-                    data[dataIndex][colIndex] = event.newValue != null ? String(event.newValue) : '';
-                    notifyChange();
-                },
-            };
-
-            gridApi = agGrid.createGrid(container, gridOptions);
-
-            // Double-click on column resize handle to auto-fit (like Excel)
-            container.addEventListener('dblclick', function(e) {
-                const target = e.target;
-                if (target && target.classList && target.classList.contains('ag-header-cell-resize')) {
-                    const headerCell = target.closest('.ag-header-cell');
-                    if (headerCell) {
-                        const colId = headerCell.getAttribute('col-id');
-                        if (colId) {
-                            gridApi.autoSizeColumns([colId]);
-                        }
-                    }
-                }
-            });
-
-            // Update info
-            const rowCount = bodyRows.length;
-            document.getElementById('info').textContent = rowCount + ' rows \\u00D7 ' + numCols + ' columns';
-            document.getElementById('status').textContent = rowCount + ' records';
-        }
-
-        function refreshGrid() {
-            if (!gridApi) return;
-
-            const numCols = getNumCols(data);
-            const bodyRows = data.slice(1);
-            const rowData = bodyRows.map((row) => {
-                const obj = {};
-                for (let c = 0; c < numCols; c++) {
-                    obj['col_' + c] = row[c] !== undefined ? row[c] : '';
-                }
-                return obj;
-            });
-
-            gridApi.setGridOption('rowData', rowData);
-        }
-
-        // Keyboard shortcuts
-        document.addEventListener('keydown', function(e) {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-                undo();
-                e.preventDefault();
-            }
-            if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
-                redo();
-                e.preventDefault();
-            }
-            // Ctrl+Plus / Ctrl+= to zoom in, Ctrl+Minus to zoom out
-            if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '=')) {
-                zoomIn();
-                e.preventDefault();
-            }
-            if ((e.ctrlKey || e.metaKey) && e.key === '-') {
-                zoomOut();
-                e.preventDefault();
-            }
-        });
-
-        // Handle external updates
-        window.addEventListener('message', function(event) {
-            const msg = event.data;
-            if (msg.type === 'update') {
-                data = parseCsv(msg.text, msg.delimiter);
-                refreshGrid();
-            }
-        });
-
-        // Initial render
-        applyZoom(); // Set consistent sizing before grid builds
-        buildGrid();
+        const vscodeApi      = acquireVsCodeApi();
+        const IS_PREVIEW     = ${isPreview ? 'true' : 'false'};
+        const PREVIEW_MODE   = '${previewMode}';
+        const TOTAL_LINE_COUNT = ${totalLineCount};
+        const DELIMITER      = '${escapedDelimiter}';
+        const FILENAME       = '${fileName.replace(/'/g, "\\'")}';
+        const IS_CHUNKED     = ${isChunked ? 'true' : 'false'};
     </script>
+
+    <!-- Bundled webview logic -->
+    <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;
 }

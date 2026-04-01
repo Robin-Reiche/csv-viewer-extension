@@ -2,7 +2,7 @@
   "name": "csv-grid-editor",
   "displayName": "CSV Grid Editor",
   "description": "View and edit CSV/TSV files in a sortable, filterable grid with auto-fit columns, zoom, and theme integration",
-  "version": "0.5.0",
+  "version": "1.2.0",
   "publisher": "RobinReiche",
   "license": "MIT",
   "icon": "icon.png",
@@ -46,13 +46,17 @@
     ]
   },
   "scripts": {
-    "compile": "tsc -p ./",
+    "compile": "tsc -p ./ && npm run bundle",
+    "bundle": "esbuild src/webview/index.ts --bundle --outfile=media/webview.js --platform=browser --target=es2020",
     "watch": "tsc -watch -p ./",
-    "package": "vsce package"
+    "watch:web": "esbuild src/webview/index.ts --bundle --outfile=media/webview.js --platform=browser --watch",
+    "package": "npm run compile && vsce package"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@types/vscode": "^1.80.0",
+    "@vscode/codicons": "^0.0.45",
+    "esbuild": "^0.27.4",
     "typescript": "^5.3.0"
   }
 }

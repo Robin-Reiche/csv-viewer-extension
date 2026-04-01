@@ -1,0 +1,29 @@
+import { setupTheme }         from './features/theme';
+import { setupUndoRedo }      from './features/undo-redo';
+import { setupZoom }           from './features/zoom';
+import { setupAutoFit }        from './features/auto-fit';
+import { setupProfile }        from './features/profile';
+import { setupSelectCopy }     from './features/select-copy';
+import { setupDelimiterBadge } from './features/delimiter';
+import { setupExport }         from './features/export';
+import { setupFreezeColumns }  from './features/freeze-columns';
+import { setupFindReplace }    from './features/find-replace';
+import { setupPagination }     from './features/pagination';
+import { setupKeyboard }       from './keyboard';
+import { setupMessaging }      from './messaging';
+
+setupTheme();
+setupUndoRedo();
+setupZoom();
+setupAutoFit();
+setupProfile();
+setupSelectCopy();
+setupDelimiterBadge();
+setupExport();
+setupFreezeColumns();
+setupFindReplace();
+setupPagination();
+setupKeyboard();
+setupMessaging();
+
+vscodeApi.postMessage({ type: 'ready' });

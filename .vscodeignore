@@ -3,7 +3,7 @@
 src/**
 docs/**
 test_data/**
-media/**
+!media/**
 node_modules/**
 .vscode-test/**
 *.vsix
