@@ -2,6 +2,11 @@
 
 All notable changes to CSV Grid Editor are documented here.
 
+## [1.3.1] - 2026-05-03
+
+### Changed
+- README: Added Marketplace installs and rating badges alongside the existing version badge.
+
 ## [1.3.0] - 2026-05-03
 
 ### Added

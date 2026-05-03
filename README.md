@@ -1,6 +1,8 @@
 # CSV Grid Editor
 
-[![VS Marketplace](https://img.shields.io/visual-studio-marketplace/v/RobinReiche.csv-grid-editor?label=VS%20Code%20Marketplace&style=for-the-badge&logo=visualstudiocode&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=RobinReiche.csv-grid-editor)
+[![VS Marketplace](https://img.shields.io/visual-studio-marketplace/v/RobinReiche.csv-grid-editor?label=Marketplace&style=for-the-badge&logo=visualstudiocode&logoColor=white&color=007ACC)](https://marketplace.visualstudio.com/items?itemName=RobinReiche.csv-grid-editor)
+[![Installs](https://img.shields.io/visual-studio-marketplace/i/RobinReiche.csv-grid-editor?label=Installs&style=for-the-badge&logo=visualstudiocode&logoColor=white&color=4EC9B0)](https://marketplace.visualstudio.com/items?itemName=RobinReiche.csv-grid-editor)
+[![Rating](https://img.shields.io/visual-studio-marketplace/r/RobinReiche.csv-grid-editor?label=Rating&style=for-the-badge&logo=visualstudiocode&logoColor=white&color=E5BC4B)](https://marketplace.visualstudio.com/items?itemName=RobinReiche.csv-grid-editor&ssr=false#review-details)
 
 A fast, feature-rich CSV/TSV editor for Visual Studio Code. Opens CSV files in a sortable, filterable, editable grid — right inside your editor, no external tools needed.
 
