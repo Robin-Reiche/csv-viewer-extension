@@ -117,6 +117,9 @@ export function getWebviewContent(
         <div    class="separator"></div>
         <button id="btn-find-replace"  title="Find &amp; Replace (${mod}F)"><i class="codicon codicon-search"></i></button>
         <div    class="separator"></div>
+        <button id="btn-go-to-row"     title="Go to row (${mod}G)${isChunked ? ' — disabled in Paged View' : ''}"${isChunked ? ' disabled' : ''}><i class="codicon codicon-list-ordered"></i></button>
+        <button id="btn-duplicates"    title="Find duplicate rows${isChunked ? ' — disabled in Paged View' : ''}"${isChunked ? ' disabled' : ''}><i class="codicon codicon-files"></i></button>
+        <div    class="separator"></div>
         <button id="btn-export"        title="Export CSV" class="text-btn"${isPreview ? ' style="display:none;"' : ''}><i class="codicon codicon-export"></i> Export</button>
         <div    class="separator"></div>
         <span   id="delim-badge" class="delim-badge" title="Click to change delimiter">Delim: ,</span>
@@ -129,6 +132,28 @@ export function getWebviewContent(
         <div class="delim-option" data-delim=";">;&nbsp;&nbsp; Semicolon</div>
         <div class="delim-option" data-delim="\\t">&#x21E5;&nbsp; Tab</div>
         <div class="delim-option" data-delim="|">|&nbsp;&nbsp; Pipe</div>
+    </div>
+
+    <!-- Go to Row popover -->
+    <div id="goto-popover" class="goto-popover hidden">
+        <label class="goto-label" for="goto-input">Go to row</label>
+        <div class="goto-input-row">
+            <input id="goto-input" type="number" min="1" step="1" placeholder="1" inputmode="numeric">
+            <span id="goto-hint" class="goto-hint">of 0</span>
+        </div>
+        <div class="goto-actions">
+            <button id="goto-cancel" class="goto-btn goto-btn-secondary">Cancel</button>
+            <button id="goto-go"     class="goto-btn goto-btn-primary">Go</button>
+        </div>
+        <div id="goto-error" class="goto-error" style="display:none;"></div>
+    </div>
+
+    <!-- Duplicate banner -->
+    <div id="dup-banner" class="dup-banner hidden">
+        <span class="dup-banner-icon"><i class="codicon codicon-files"></i></span>
+        <span id="dup-banner-text" class="dup-banner-text"></span>
+        <button id="dup-only-toggle" class="dup-banner-btn">Show only duplicates</button>
+        <button id="dup-dismiss"     class="dup-banner-btn dup-banner-btn-secondary">Dismiss</button>
     </div>
 
     <!-- Find & Replace bar -->

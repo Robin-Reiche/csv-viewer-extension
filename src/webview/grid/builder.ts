@@ -37,11 +37,17 @@ export function buildGrid(): void {
     const numCols   = getNumCols(state.data);
 
     // Row index column (Feature 1)
+    // In "show only duplicates" mode the column shows the ORIGINAL CSV line number
+    // (read from row data via _origIndex) instead of the displayed row index, so
+    // users can locate duplicates in the source file.
     const columnDefs: any[] = [{
         headerName: '#',
         colId: 'row-index',
         headerClass: 'row-index-header',
-        valueGetter: (p: any) => p.node.rowIndex + 1,
+        valueGetter: (p: any) =>
+            state.dupShowOnly && p.data?._origIndex != null
+                ? p.data._origIndex
+                : p.node.rowIndex + 1,
         width: 48, minWidth: 36, maxWidth: 80,
         pinned: 'left',
         suppressHeaderMenuButton: true, sortable: false, filter: false,
@@ -74,10 +80,13 @@ export function buildGrid(): void {
         columnDefs.push(colDef);
     }
 
-    const rowData = bodyRows.map(row => {
-        const obj: Record<string, string> = {};
+    // _origIndex holds the original 1-based data-row position, which lets the
+    // duplicate-detection feature show source-file line numbers and survive
+    // sort/filter without losing track of which row is which.
+    const rowData = bodyRows.map((row, i) => {
+        const obj: Record<string, string | number> = { _origIndex: i + 1 };
         for (let c = 0; c < numCols; c++) obj['col_' + c] = row[c] ?? '';
-        return obj;
+        return obj as Record<string, string>;
     });
 
     const container = document.getElementById('grid-container')!;
@@ -87,6 +96,16 @@ export function buildGrid(): void {
     const ZOOM_SCALE = state.ZOOM_STEPS[state.zoomIndex] / 100;
     const BASE_TEXT_BTN_FONT = 11;
 
+    // Merge find-match highlight rules with duplicate-row highlight.
+    // Both rule sets must coexist on the same defaultColDef.
+    const cellClassRules = {
+        ...getFindCellClassRules(),
+        'cell-dup-row': (p: any) =>
+            state.dupRowSet.size > 0
+            && p.data?._origIndex != null
+            && state.dupRowSet.has(p.data._origIndex as number),
+    };
+
     const gridOptions: any = {
         columnDefs,
         rowData,
@@ -94,8 +113,15 @@ export function buildGrid(): void {
             flex: 0, width: 130,
             editable: !IS_PREVIEW,
             sortable: true, resizable: true,
-            cellClassRules: getFindCellClassRules(),
+            cellClassRules,
         },
+        // External filter for "show only duplicates" mode — kept independent of
+        // user column filters so toggling dup-only doesn't clobber them.
+        isExternalFilterPresent: () => state.dupShowOnly,
+        doesExternalFilterPass:  (node: any) =>
+            !!node.data
+            && node.data._origIndex != null
+            && state.dupRowSet.has(node.data._origIndex as number),
         // Replace AG Grid icon-font glyphs with inline SVG so no font
         // download is needed (web-font loading is blocked in VS Code webviews).
         icons: {

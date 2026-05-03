@@ -10,6 +10,8 @@ import { setupFreezeColumns }  from './features/freeze-columns';
 import { setupDeleteRowCol }   from './features/delete-row-col';
 import { setupFindReplace }    from './features/find-replace';
 import { setupPagination }     from './features/pagination';
+import { setupGoToRow }        from './features/go-to-row';
+import { setupDuplicates }     from './features/duplicates';
 import { setupKeyboard }       from './keyboard';
 import { setupMessaging }      from './messaging';
 
@@ -25,6 +27,8 @@ setupFreezeColumns();
 setupDeleteRowCol();
 setupFindReplace();
 setupPagination();
+setupGoToRow();
+setupDuplicates();
 setupKeyboard();
 setupMessaging();
 

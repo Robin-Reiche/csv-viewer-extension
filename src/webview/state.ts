@@ -31,6 +31,16 @@ export const state = {
     findMatchIndex: -1,
 
     currentPage: 0,
+
+    // Duplicate detection
+    // dupRowSet — set of original 1-based row indices (i.e. _origIndex values) that
+    // appear more than once. Empty set means dup detection is currently OFF.
+    dupRowSet: new Set<number>(),
+    dupGroupCount: 0,
+    dupShowOnly: false,
+    // Snapshot of the current rowData taken when entering "show only duplicates"
+    // so we can restore the original row order on dismiss without re-parsing.
+    dupOriginalRowData: null as Record<string, string>[] | null,
 };
 
 export function getNumCols(rows: CsvRow[]): number {

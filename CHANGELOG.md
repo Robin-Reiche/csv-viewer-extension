@@ -2,6 +2,16 @@
 
 All notable changes to CSV Grid Editor are documented here.
 
+## [1.3.0] - 2026-05-03
+
+### Added
+- **Go to Row** — New toolbar button (and `Ctrl+G` / `Cmd+G` shortcut) opens a popover where you can type any row number and jump directly to it. The target row briefly flashes blue to confirm navigation. Disabled in Paged View.
+- **Duplicate Row Detection** — New toolbar button scans every row and highlights duplicates with an amber tint. A banner reports the number of duplicate rows and how many groups they form.
+  - **Show only duplicates** — Filters the grid to duplicates only, sorts matching rows next to each other, and switches the `#` column to show the original CSV line number of each row so you can locate them in the source file.
+  - **Dismiss** restores the full table at any time.
+  - Duplicate state is automatically cleared when you edit cells, undo/redo, delete rows/columns, or the file changes externally.
+  - Disabled in Paged View.
+
 ## [1.2.2] - 2026-04-14
 
 ### Added

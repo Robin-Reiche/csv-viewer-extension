@@ -6,6 +6,7 @@ import { refreshGrid } from './grid/refresh';
 import { hideLoader } from './utils/loader';
 import { updateDelimiterBadge } from './features/delimiter';
 import { handlePageData } from './features/pagination';
+import { resetDuplicatesState } from './features/duplicates';
 
 function initWithData(text: string, delimiter: string): void {
     state.rawCsvText      = text;
@@ -41,6 +42,8 @@ export function setupMessaging(): void {
             initWithData(msg.text, msg.delimiter);
         } else if (msg.type === 'update') {
             state.data = parseCsv(msg.text, msg.delimiter);
+            // External file change → existing dup highlights now point at stale rows.
+            resetDuplicatesState();
             refreshGrid();
         } else if (msg.type === 'pageData') {
             handlePageData(msg);

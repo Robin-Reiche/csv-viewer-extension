@@ -2,6 +2,7 @@ import { state } from '../state';
 import { toCsv } from '../utils/csv';
 import { refreshGrid } from '../grid/refresh';
 import { recomputeColTypes } from '../grid/column-type';
+import { resetDuplicatesState } from './duplicates';
 
 export function snapshot(): string[][] {
     return JSON.parse(JSON.stringify(state.data));
@@ -42,6 +43,10 @@ export function updateButtons(): void {
 }
 
 export function notifyChange(): void {
+    // Edits invalidate duplicate-detection results (rows may have been added,
+    // deleted, or modified into / out of being a duplicate). Clearing here
+    // covers cell edits, undo/redo, find-replace, and row/column deletions.
+    resetDuplicatesState();
     vscodeApi.postMessage({ type: 'edit', text: toCsv(state.data, state.currentDelimiter) });
 }
 
