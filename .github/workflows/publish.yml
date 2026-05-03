@@ -25,4 +25,4 @@ jobs:
         run: npm run compile
 
       - name: Publish to Marketplace
-        run: npx vsce publish --pat ${{ secrets.VSCE_PAT }}
+        run: npx @vscode/vsce publish --pat ${{ secrets.VSCE_PAT }}

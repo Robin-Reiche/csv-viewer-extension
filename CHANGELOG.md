@@ -2,6 +2,12 @@
 
 All notable changes to CSV Grid Editor are documented here.
 
+## [1.3.3] - 2026-05-03
+
+### Fixed
+- Marketplace publish workflow: switched the badge URLs from `.svg` to `.png` because `vsce` rejects SVG images from non-allowlisted hosts and was failing the publish step.
+- Workflow now invokes `npx @vscode/vsce` instead of the deprecated `npx vsce` to clear the rename deprecation warning.
+
 ## [1.3.2] - 2026-05-03
 
 ### Fixed
